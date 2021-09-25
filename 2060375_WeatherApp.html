@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My weather app</title>
+</head>
+<body style="text-align: center;background-color: rgb(185, 209, 236);">
+    <h1><div class="city">Loading...</div></h1>
+    <div>
+        <div>
+            <div class="temp" style="font-size: 40px;"></div>
+            <div class="image"></div>      
+            <div class="weather"></div>
+        </div>
+        <div>
+            <div class="max-temp"></div>
+            <div class="min-temp"></div>
+            <div class="feel-temp"></div>
+        </div>
+        <div>
+            <div class="pressure"></div>
+            <div class="visibility"></div>
+            <div class="humidity"></div>
+        </div>
+        <div>
+            <div class="wind-speed"></div>
+            <div class="myLastUpdated"></div>
+        </div>
+    </div>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    // Registration was successful
+                    console.log('ServiceWorker registration successful');
+                }, function(err) {
+                    // registration failed :(
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+        // Check browser cache first, use if there and less than 10 seconds old
+        if(localStorage.when != null && parseInt(localStorage.when) + 10000 > Date.now()) {
+            let freshness = Math.round((Date.now() - localStorage.when)/1000);
+            // Converting & representing the time in HH:MM:SS format
+            let seconds = freshness % 60;
+            let minutes= Math.floor((freshness/60) % 60);
+            let hours = Math.floor((freshness/60) / 60);
+            document.querySelector('.myLastUpdated').innerHTML = "Last Updated : "+hours+":"+minutes+":"+seconds+" (hh:mm:ss)";
+            document.querySelector('.city').innerHTML="Weather in "+localStorage.current_city;
+            document.querySelector('.image').innerHTML="<img height='100px' width='100px' src=http://openweathermap.org/img/w/"+localStorage.icon+".png"+">"; 
+            document.querySelector('.temp').innerHTML=localStorage.temperature+" &#8451;";   
+            document.querySelector('.weather').innerHTML=localStorage.weather_description;  
+            document.querySelector('.max-temp').innerHTML="Temperature (max) : "+localStorage.max_temperature+" &#8451;";
+            document.querySelector('.min-temp').innerHTML="Temperature (min) : "+localStorage.min_temperature+" &#8451;";  
+            document.querySelector('.feel-temp').innerHTML="Real feel : "+localStorage.real_feel+" &#8451;"; 
+            document.querySelector('.pressure').innerHTML="Air pressure : "+localStorage.air_pressure+" hPa";  
+            document.querySelector('.humidity').innerHTML="Humidity : "+localStorage.humidity+" %";  
+            document.querySelector('.visibility').innerHTML="Visibility : "+localStorage.visibility+" km";  
+            document.querySelector('.wind-speed').innerHTML="Wind : "+localStorage.wind_speed+" km/h";
+
+            // No local cache, access network
+        } else {
+             // Fetch Coventry weather data from API for given city
+            fetch('http://localhost/Weather/my_api.php?city=coventry')
+            // Convert response string to json object
+            .then(response => response.json())
+            .then(response => {
+                // Copy elements of response to our HTML paragraph
+                var temperature = Math.floor(response.temperature - 273.15); 
+                var tempFeel = (response.feels_like - 273.15).toFixed(2);
+                var tempMax = (response.temp_max - 273.15).toFixed(2); 
+                var tempMin = (response.temp_min - 273.15).toFixed(2); 
+                var windSpeed = (response.speed * 18 / 5).toFixed(2); 
+                var visible = (response.visibility / 1000); 
+                var pressure = response.pressure;
+                var humidity = response.humidity;
+                var icon = response.icon;
+                var city = response.city;
+                var weather_desc = response.weather_desc;
+                document.querySelector('.city').innerHTML="Weather in "+city;
+                document.querySelector('.image').innerHTML="<img height='100px' width='100px' src=http://openweathermap.org/img/w/"+icon+".png"+">"; 
+                document.querySelector('.temp').innerHTML=temperature+" &#8451;";   
+                document.querySelector('.weather').innerHTML=weather_desc;  
+                document.querySelector('.max-temp').innerHTML="Temperature (max) : "+tempMax+" &#8451;";
+                document.querySelector('.min-temp').innerHTML="Temperature (min) : "+tempMin+" &#8451;";  
+                document.querySelector('.feel-temp').innerHTML="Real feel : "+tempFeel+" &#8451;"; 
+                document.querySelector('.pressure').innerHTML="Air pressure : "+pressure+" hPa";  
+                document.querySelector('.humidity').innerHTML="Humidity : "+humidity+" %";  
+                document.querySelector('.visibility').innerHTML="Visibility : "+visible+" km";  
+                document.querySelector('.wind-speed').innerHTML="Wind : "+windSpeed+" km/h";  
+
+                // Save new data to browser with new timestamp
+                localStorage.when = Date.now(); // milliseconds since January 1 1970
+                localStorage.temperature = temperature;
+                localStorage.max_temperature = tempMax;
+                localStorage.min_temperature = tempMin;
+                localStorage.real_feel = tempFeel;
+                localStorage.wind_speed = windSpeed;
+                localStorage.visibility = visible;
+                localStorage.air_pressure = pressure;
+                localStorage.humidity = humidity;
+                localStorage.weather_description = weather_desc;
+                localStorage.current_city = city;
+                localStorage.icon = icon;
+            })
+            .catch(err => {
+                if(localStorage.when != null) {
+                    // Get data from browser cache
+                    let freshness = Math.round((Date.now() - localStorage.when)/1000);
+                    // Converting & representing the time in HH:MM:SS format
+                    let seconds = freshness % 60;
+                    let minutes= Math.floor((freshness/60) % 60);
+                    let hours = Math.floor((freshness/60) / 60);
+                    document.querySelector('.myLastUpdated').innerHTML = "Last Updated : "+hours+":"+minutes+":"+seconds+" (hh:mm:ss)";
+                    document.querySelector('.city').innerHTML="Weather in "+localStorage.current_city;
+                    document.querySelector('.image').innerHTML="<img height='100px' width='100px' src=http://openweathermap.org/img/w/"+localStorage.icon+".png"+">"; 
+                    document.querySelector('.temp').innerHTML=localStorage.temperature+" &#8451;";
+                    document.querySelector('.weather').innerHTML=localStorage.weather_description;  
+                    document.querySelector('.max-temp').innerHTML="Temperature (max) : "+localStorage.max_temperature+" &#8451;";
+                    document.querySelector('.min-temp').innerHTML="Temperature (min) : "+localStorage.min_temperature+" &#8451;";  
+                    document.querySelector('.feel-temp').innerHTML="Real feel : "+localStorage.real_feel+" &#8451;"; 
+                    document.querySelector('.pressure').innerHTML="Air pressure : "+localStorage.air_pressure+" hPa";  
+                    document.querySelector('.humidity').innerHTML="Humidity : "+localStorage.humidity+" %";  
+                    document.querySelector('.visibility').innerHTML="Visibility : "+localStorage.visibility+" km";  
+                    document.querySelector('.wind-speed').innerHTML="Wind : "+localStorage.wind_speed+" km/h";
+                } else {
+                    // Display errors in console
+                    console.log(err);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
